@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SpeakUp — English Speaking Coach</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet"/>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#0a0f1e;font-family:'DM Sans',sans-serif;color:#fff;min-height:100vh;}
+  .app{max-width:430px;margin:0 auto;min-height:100vh;position:relative;}
+  .screen{min-height:100vh;display:none;flex-direction:column;}
+  .screen.active{display:flex;}
+  input,button{font-family:'DM Sans',sans-serif;}
+
+  #landing{background:linear-gradient(135deg,#0a0f1e 0%,#0d1b2a 50%,#0a1628 100%);
+    align-items:center;justify-content:center;padding:24px;text-align:center;}
+  .blob{position:absolute;width:420px;height:420px;border-radius:50%;
+    background:radial-gradient(circle,rgba(0,229,160,0.08) 0%,transparent 70%);
+    top:5%;left:50%;transform:translateX(-50%);pointer-events:none;}
+  .logo-box{width:76px;height:76px;border-radius:22px;
+    background:linear-gradient(135deg,#00E5A0,#00B8D9);
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 22px;font-size:34px;box-shadow:0 0 44px rgba(0,229,160,0.35);}
+  .badge{display:inline-block;background:rgba(0,229,160,0.1);
+    border:1px solid rgba(0,229,160,0.3);border-radius:20px;
+    padding:4px 14px;font-size:11px;color:#00E5A0;
+    letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;}
+  h1{font-size:40px;font-weight:800;line-height:1.1;margin-bottom:14px;
+    font-family:'Playfair Display',serif;}
+  h1 span{color:#00E5A0;}
+  .subtitle{color:#8892a4;font-size:15px;line-height:1.65;margin-bottom:36px;}
+  .features{display:flex;gap:10px;justify-content:center;margin-bottom:36px;}
+  .feature{flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+    border-radius:12px;padding:12px 6px;text-align:center;}
+  .feature .icon{font-size:20px;margin-bottom:4px;}
+  .feature .label{color:#c4cadc;font-size:11px;}
+  .btn-primary{width:100%;padding:18px;border-radius:16px;
+    background:linear-gradient(135deg,#00E5A0,#00C9B1);border:none;
+    color:#0a0f1e;font-size:16px;font-weight:700;cursor:pointer;
+    box-shadow:0 8px 30px rgba(0,229,160,0.4);transition:all 0.2s;}
+  .btn-primary:disabled{background:rgba(255,255,255,0.1);color:#8892a4;
+    cursor:not-allowed;box-shadow:none;}
+  .hint{color:#8892a4;font-size:12px;margin-top:10px;}
+
+  #onboarding{padding:24px;}
+  .progress-bar{display:flex;gap:8px;margin-bottom:40px;}
+  .progress-step{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,0.1);transition:background 0.3s;}
+  .progress-step.done{background:#00E5A0;}
+  .step{display:none;flex:1;flex-direction:column;}
+  .step.active{display:flex;flex-direction:column;}
+  .step-emoji{font-size:36px;margin-bottom:8px;}
+  .step h2{font-size:24px;font-weight:700;font-family:'Playfair Display',serif;margin-bottom:8px;}
+  .step p{color:#8892a4;margin-bottom:28px;}
+  .text-input{width:100%;padding:16px;border-radius:12px;
+    background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);
+    color:#fff;font-size:16px;outline:none;}
+  .text-input:focus{border-color:rgba(0,229,160,0.4);}
+  .choice-btn{display:flex;align-items:center;gap:14px;width:100%;
+    padding:14px 16px;border-radius:14px;margin-bottom:10px;
+    background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+    color:#fff;cursor:pointer;text-align:left;}
+  .choice-btn.selected{background:rgba(0,229,160,0.15);border-color:#00E5A0;color:#00E5A0;}
+  .choice-icon{font-size:24px;}
+  .choice-label{font-weight:600;font-size:14px;}
+  .choice-desc{font-size:12px;color:#8892a4;margin-top:2px;}
+
+  #dashboard{padding:24px;padding-bottom:80px;overflow-y:auto;}
+  .dash-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;}
+  .avatar{width:44px;height:44px;border-radius:12px;
+    background:linear-gradient(135deg,#00E5A0,#00B8D9);
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px;color:#0a0f1e;font-weight:800;}
+  .streak-card{background:linear-gradient(135deg,rgba(0,229,160,0.1),rgba(0,184,217,0.06));
+    border:1px solid rgba(0,229,160,0.18);border-radius:18px;padding:18px;margin-bottom:18px;}
+  .streak-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .streak-label{color:#00E5A0;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;}
+  .streak-count{color:#fff;font-size:28px;font-weight:800;}
+  .days-row{display:flex;gap:6px;}
+  .day-dot{flex:1;height:34px;border-radius:8px;background:rgba(255,255,255,0.06);
+    display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#8892a4;}
+  .day-dot.done{background:#00E5A0;color:#0a0f1e;}
+  .cta-card{background:linear-gradient(135deg,#00E5A0 0%,#00B8D9 100%);
+    border-radius:18px;padding:20px;margin-bottom:18px;position:relative;overflow:hidden;cursor:pointer;}
+  .cta-blob{position:absolute;right:-16px;top:-16px;width:90px;height:90px;
+    border-radius:50%;background:rgba(255,255,255,0.12);}
+  .cta-tag{color:rgba(0,15,30,0.65);font-size:11px;font-weight:700;
+    letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+  .cta-title{color:#0a0f1e;font-size:20px;font-weight:800;margin-bottom:4px;}
+  .cta-sub{color:rgba(0,15,30,0.6);font-size:13px;margin-bottom:16px;}
+  .cta-btn{display:inline-flex;align-items:center;gap:8px;
+    background:#0a0f1e;color:#00E5A0;border-radius:10px;
+    padding:10px 20px;font-size:14px;font-weight:700;border:none;cursor:pointer;}
+  .stats-row{display:flex;gap:10px;margin-bottom:18px;}
+  .stat-box{flex:1;background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.08);border-radius:14px;
+    padding:14px 8px;text-align:center;}
+  .stat-icon{font-size:18px;margin-bottom:4px;}
+  .stat-val{color:#fff;font-weight:700;font-size:15px;}
+  .stat-lbl{color:#8892a4;font-size:10px;margin-top:2px;}
+  .section-title{color:#fff;font-size:15px;font-weight:700;margin-bottom:12px;}
+  .session-item{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+    border-radius:14px;padding:14px;margin-bottom:10px;
+    display:flex;align-items:center;gap:12px;cursor:pointer;}
+  .session-item.locked{opacity:0.6;cursor:default;}
+  .session-icon{width:42px;height:42px;border-radius:11px;
+    background:rgba(255,255,255,0.06);display:flex;align-items:center;
+    justify-content:center;font-size:20px;flex-shrink:0;}
+  .session-icon.today{background:rgba(0,229,160,0.15);}
+  .session-name{color:#fff;font-weight:600;font-size:14px;}
+  .session-desc{color:#8892a4;font-size:12px;margin-top:2px;}
+  .session-tag{font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;
+    background:rgba(255,255,255,0.06);color:#8892a4;white-space:nowrap;}
+  .session-tag.today{background:rgba(0,229,160,0.2);color:#00E5A0;}
+
+  #session{display:flex;flex-direction:column;}
+  .session-header{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.08);
+    display:flex;align-items:center;gap:12px;flex-shrink:0;}
+  .back-btn{background:none;border:none;color:#8892a4;font-size:20px;cursor:pointer;padding:0;}
+  .session-title{color:#fff;font-weight:700;font-size:15px;}
+  .session-sub{color:#8892a4;font-size:12px;}
+  .timer{background:rgba(0,229,160,0.15);border:1px solid rgba(0,229,160,0.3);
+    border-radius:8px;padding:5px 12px;color:#00E5A0;font-weight:700;font-size:14px;}
+  .timer.urgent{background:rgba(255,80,80,0.2);border-color:rgba(255,80,80,0.4);color:#ff6b6b;}
+  .scenario-banner{margin:10px 16px;padding:10px 14px;
+    background:rgba(100,120,255,0.08);border:1px solid rgba(100,120,255,0.18);
+    border-radius:12px;flex-shrink:0;}
+  .scenario-label{color:#8892a4;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;}
+  .scenario-text{color:#c4cadc;font-size:13px;}
+  .messages{flex:1;overflow-y:auto;padding:8px 16px;min-height:200px;}
+  .msg-row{margin-bottom:16px;}
+  .msg-ai{display:flex;gap:10px;align-items:flex-start;}
+  .ai-avatar{width:32px;height:32px;border-radius:10px;flex-shrink:0;
+    background:linear-gradient(135deg,#00E5A0,#00B8D9);
+    display:flex;align-items:center;justify-content:center;
+    font-size:13px;color:#0a0f1e;font-weight:800;}
+  .bubble-ai{background:rgba(255,255,255,0.06);border-radius:4px 14px 14px 14px;
+    padding:12px 14px;color:#e2e8f0;font-size:14px;line-height:1.6;max-width:80%;}
+  .bubble-user{background:linear-gradient(135deg,rgba(0,229,160,0.18),rgba(0,184,217,0.12));
+    border:1px solid rgba(0,229,160,0.2);border-radius:14px 4px 14px 14px;
+    padding:12px 14px;color:#fff;font-size:14px;line-height:1.6;max-width:80%;
+    margin-left:auto;}
+  .tip-box{margin-left:42px;margin-top:8px;background:rgba(0,229,160,0.08);
+    border:1px solid rgba(0,229,160,0.2);border-radius:10px;padding:10px 12px;}
+  .tip-label{color:#00E5A0;font-size:11px;font-weight:700;margin-bottom:4px;}
+  .tip-text{color:#c4cadc;font-size:13px;}
+  .typing{display:flex;gap:10px;align-items:center;margin-bottom:16px;}
+  .typing-dots{background:rgba(255,255,255,0.06);border-radius:4px 14px 14px 14px;
+    padding:12px 18px;display:flex;gap:6px;align-items:center;}
+  .dot{width:7px;height:7px;border-radius:50%;background:#00E5A0;}
+  .dot:nth-child(1){animation:bounce 1.2s ease 0s infinite;}
+  .dot:nth-child(2){animation:bounce 1.2s ease 0.2s infinite;}
+  .dot:nth-child(3){animation:bounce 1.2s ease 0.4s infinite;}
+  .mic-area{padding:20px 16px 36px;border-top:1px solid rgba(255,255,255,0.08);
+    text-align:center;flex-shrink:0;}
+  .mic-status{color:#8892a4;font-size:13px;margin-bottom:20px;}
+  .mic-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center;}
+  .ripple{position:absolute;border-radius:50%;border:2px solid rgba(0,229,160,0.3);
+    animation:ripple 1.8s ease-out infinite;pointer-events:none;}
+  .mic-btn{width:80px;height:80px;border-radius:50%;border:none;cursor:pointer;
+    font-size:32px;transition:all 0.3s;position:relative;z-index:1;}
+  .mic-btn.idle{background:rgba(255,255,255,0.08);}
+  .mic-btn.active{background:linear-gradient(135deg,#00E5A0,#00B8D9);
+    box-shadow:0 0 30px rgba(0,229,160,0.5);}
+  .finish-btn{margin-top:16px;padding:10px 24px;background:none;
+    border:1px solid rgba(255,255,255,0.1);border-radius:10px;
+    color:#8892a4;font-size:13px;cursor:pointer;}
+  .text-fallback{display:flex;gap:8px;margin-top:16px;padding:0 8px;}
+  .text-fallback input{flex:1;padding:12px 14px;border-radius:10px;
+    background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+    color:#fff;font-size:14px;outline:none;}
+  .send-btn{padding:12px 16px;border-radius:10px;border:none;
+    background:linear-gradient(135deg,#00E5A0,#00B8D9);
+    color:#0a0f1e;font-weight:700;cursor:pointer;}
+
+  #results{padding:24px;overflow-y:auto;}
+  .results-header{text-align:center;margin-bottom:28px;}
+  .results-emoji{font-size:52px;margin-bottom:10px;}
+  .results-title{font-size:24px;font-weight:800;font-family:'Playfair Display',serif;margin-bottom:6px;}
+  .results-sub{color:#8892a4;}
+  .ring-wrap{display:flex;justify-content:center;margin-bottom:28px;position:relative;}
+  .ring-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;}
+  .ring-score{font-size:26px;font-weight:800;}
+  .ring-word{color:#8892a4;font-size:11px;}
+  .score-row{margin-bottom:14px;}
+  .score-top{display:flex;justify-content:space-between;margin-bottom:5px;}
+  .score-name{color:#c4cadc;font-size:14px;}
+  .score-val{font-weight:700;font-size:14px;}
+  .score-bar{height:6px;background:rgba(255,255,255,0.08);border-radius:3px;}
+  .score-fill{height:100%;border-radius:3px;}
+  .tips-box{background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.2);
+    border-radius:14px;padding:16px;margin:20px 0;}
+  .tips-title{color:#00E5A0;font-weight:700;font-size:13px;margin-bottom:10px;}
+  .tip-item{color:#c4cadc;font-size:13px;margin-bottom:7px;padding-left:10px;
+    border-left:2px solid rgba(0,229,160,0.3);}
+
+  @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-8px)}}
+  @keyframes ripple{0%{transform:scale(1);opacity:0.6}100%{transform:scale(1.6);opacity:0}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div id="landing" class="screen active">
+    <div class="blob"></div>
+    <div style="max-width:380px;width:100%;position:relative;">
+      <div class="logo-box">🗣️</div>
+      <div class="badge">Voice AI • Daily 15 Minutes</div>
+      <h1>Speak English<br><span>Out Loud</span></h1>
+      <p class="subtitle">Talk to an AI conversation partner. Get instant coaching on your fluency, grammar, and confidence.</p>
+      <div class="features">
+        <div class="feature"><div class="icon">🎙️</div><div class="label">Voice AI</div></div>
+        <div class="feature"><div class="icon">🔊</div><div class="label">Real Voice</div></div>
+        <div class="feature"><div class="icon">💡</div><div class="label">Live Tips</div></div>
+      </div>
+      <button class="btn-primary" onclick="showScreen('onboarding')">Start Speaking →</button>
+      <p class="hint">Free · No credit card needed</p>
+    </div>
+  </div>
+
+  <div id="onboarding" class="screen">
+    <div style="padding:24px;display:flex;flex-direction:column;flex:1;">
+      <div class="progress-bar">
+        <div class="progress-step done" id="ps0"></div>
+        <div class="progress-step" id="ps1"></div>
+        <div class="progress-step" id="ps2"></div>
+      </div>
+      <div class="step active" id="step0">
+        <div class="step-emoji">👋</div>
+        <h2>What's your name?</h2>
+        <p>We'll personalise your sessions.</p>
+        <input class="text-input" id="nameInput" placeholder="Your name..." oninput="checkStep(0)"/>
+      </div>
+      <div class="step" id="step1">
+        <div class="step-emoji">📊</div>
+        <h2>Your English level?</h2>
+        <p>We adapt difficulty to your level.</p>
+        <button class="choice-btn" onclick="selectLevel(this,'Beginner')"><span class="choice-icon">🌱</span><div><div class="choice-label">Beginner</div></div></button>
+        <button class="choice-btn" onclick="selectLevel(this,'Intermediate')"><span class="choice-icon">🌿</span><div><div class="choice-label">Intermediate</div></div></button>
+        <button class="choice-btn" onclick="selectLevel(this,'Advanced')"><span class="choice-icon">🌳</span><div><div class="choice-label">Advanced</div></div></button>
+      </div>
+      <div class="step" id="step2">
+        <div class="step-emoji">🎯</div>
+        <h2>Your main goal?</h2>
+        <p>Shapes your daily scenarios.</p>
+        <button class="choice-btn" onclick="selectGoal(this,'Work & Business')"><span class="choice-icon">💼</span><div><div class="choice-label">Work & Business</div><div class="choice-desc">Meetings, presentations</div></div></button>
+        <button class="choice-btn" onclick="selectGoal(this,'Travel')"><span class="choice-icon">✈️</span><div><div class="choice-label">Travel & Daily Life</div><div class="choice-desc">Hotels, conversations</div></div></button>
+        <button class="choice-btn" onclick="selectGoal(this,'Academic')"><span class="choice-icon">🎓</span><div><div class="choice-label">Academic</div><div class="choice-desc">Studying abroad</div></div></button>
+        <button class="choice-btn" onclick="selectGoal(this,'General')"><span class="choice-icon">🌐</span><div><div class="choice-label">General Fluency</div><div class="choice-desc">Everything</div></div></button>
+      </div>
+      <div style="margin-top:auto;padding-top:16px;">
+        <button class="btn-primary" id="nextBtn" disabled onclick="nextStep()">Continue →</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="dashboard" class="screen">
+    <div class="dash-header">
+      <div>
+        <p style="color:#8892a4;font-size:13px;">Good day,</p>
+        <h2 style="font-size:22px;font-weight:700;font-family:'Playfair Display',serif;" id="dashName">Friend 👋</h2>
+      </div>
+      <div class="avatar" id="dashAvatar">U</div>
+    </div>
+    <div class="streak-card">
+      <div class="streak-top">
+        <div>
+          <div class="streak-label">🔥 Streak</div>
+          <div class="streak-count">4 Days</div>
+        </div>
+        <svg width="80" height="80" style="transform:rotate(-90deg)">
+          <circle cx="40" cy="40" r="34" fill="none" stroke="#1a2235" stroke-width="6"/>
+          <circle cx="40" cy="40" r="34" fill="none" stroke="#00E5A0" stroke-width="6" stroke-dasharray="153 213" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="days-row">
+        <div class="day-dot done">M</div><div class="day-dot done">T</div>
+        <div class="day-dot done">W</div><div class="day-dot done">T</div>
+        <div class="day-dot">F</div><div class="day-dot">S</div><div class="day-dot">S</div>
+      </div>
+    </div>
+    <div class="cta-card" onclick="startSession()">
+      <div class="cta-blob"></div>
+      <div class="cta-tag">TODAY'S SESSION</div>
+      <div class="cta-title">Introduce Yourself</div>
+      <div class="cta-sub">Voice conversation · 15 min</div>
+      <button class="cta-btn">🎙️ Start Talking</button>
+    </div>
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-icon">⏱</div><div class="stat-val">4.2h</div><div class="stat-lbl">Time</div></div>
+      <div class="stat-box"><div class="stat-icon">💬</div><div class="stat-val">12</div><div class="stat-lbl">Sessions</div></div>
+      <div class="stat-box"><div class="stat-icon">📈</div><div class="stat-val">+38%</div><div class="stat-lbl">Progress</div></div>
+    </div>
+    <div class="section-title">All Scenarios</div>
+    <div class="session-item" onclick="startSession()">
+      <div class="session-icon today">🤝</div>
+      <div style="flex:1"><div class="session-name">Introduce Yourself</div><div class="session-desc">Networking event</div></div>
+      <div class="session-tag today">TODAY</div>
+    </div>
+    <div class="session-item locked">
+      <div class="session-icon">💡</div>
+      <div style="flex:1"><div class="session-name">Disagree Politely</div><div class="session-desc">Team meeting</div></div>
+      <div class="session-tag">LOCKED</div>
+    </div>
+    <div class="session-item locked">
+      <div class="session-icon">🗺️</div>
+      <div style="flex:1"><div class="session-name">Ask for Help</div><div class="session-desc">Lost in city</div></div>
+      <div class="session-tag">LOCKED</div>
+    </div>
+  </div>
+
+  <div id="session" class="screen">
+    <div class="session-header">
+      <button class="back-btn" onclick="showScreen('dashboard')">←</button>
+      <div style="flex:1">
+        <div class="session-title">Introduce Yourself</div>
+        <div class="session-sub">🎙️ Voice Session</div>
+      </div>
+      <div class="timer" id="timerDisplay">15:00</div>
+    </div>
+    <div class="scenario-banner">
+      <div class="scenario-label">SCENARIO</div>
+      <div class="scenario-text">You're at a professional networking event. Introduce yourself to a new contact.</div>
+    </div>
+    <div class="messages" id="messages"></div>
+    <div class="mic-area">
+      <div class="mic-status" id="micStatus">Tap the mic to speak</div>
+      <div class="mic-wrap" id="micWrap">
+        <button class="mic-btn idle" id="micBtn" onclick="toggleMic()">🎙️</button>
+      </div>
+      <div class="text-fallback">
+        <input type="text" id="textInput" placeholder="Or type your response..." onkeydown="if(event.key==='Enter')sendText()"/>
+        <button class="send-btn" onclick="sendText()">Send</button>
+      </div>
+      <button class="finish-btn" onclick="showScreen('results')">Finish & See Results</button>
+    </div>
+  </div>
+
+  <div id="results" class="screen">
+    <div class="results-header">
+      <div class="results-emoji">🎉</div>
+      <div class="results-title">Session Complete!</div>
+      <div class="results-sub">Here's your performance breakdown.</div>
+    </div>
+    <div class="ring-wrap">
+      <svg width="110" height="110" style="transform:rotate(-90deg)">
+        <circle cx="55" cy="55" r="47" fill="none" stroke="#1a2235" stroke-width="8"/>
+        <circle cx="55" cy="55" r="47" fill="none" stroke="#00E5A0" stroke-width="8" stroke-dasharray="219 295" stroke-linecap="round"/>
+      </svg>
+      <div class="ring-label"><div class="ring-score">74</div><div class="ring-word">Overall</div></div>
+    </div>
+    <div class="score-row"><div class="score-top"><span class="score-name">Fluency</span><span class="score-val" style="color:#00E5A0">76%</span></div><div class="score-bar"><div class="score-fill" style="width:76%;background:#00E5A0"></div></div></div>
+    <div class="score-row"><div class="score-top"><span class="score-name">Vocabulary</span><span class="score-val" style="color:#00B8D9">68%</span></div><div class="score-bar"><div class="score-fill" style="width:68%;background:#00B8D9"></div></div></div>
+    <div class="score-row"><div class="score-top"><span class="score-name">Confidence</span><span class="score-val" style="color:#a78bfa">82%</span></div><div class="score-bar"><div class="score-fill" style="width:82%;background:#a78bfa"></div></div></div>
+    <div class="score-row"><div class="score-top"><span class="score-name">Grammar</span><span class="score-val" style="color:#fbbf24">71%</span></div><div class="score-bar"><div class="score-fill" style="width:71%;background:#fbbf24"></div></div></div>
+    <div class="tips-box">
+      <div class="tips-title">💡 Tips for Tomorrow</div>
+      <div class="tip-item">Use connecting words: 'however', 'therefore', 'in addition'</div>
+      <div class="tip-item">Your sentence structure is improving — keep it up!</div>
+      <div class="tip-item">Add more details when describing yourself</div>
+    </div>
+    <button class="btn-primary" onclick="showScreen('dashboard')">Back to Dashboard</button>
+    <div style="height:24px;"></div>
+  </div>
+
+</div>
+
+<script>
+const user = { name:"Friend", level:"Intermediate", goal:"General" };
+let currentStep = 0, selectedLevel = null, selectedGoal = null;
+let timerInterval = null, timeLeft = 900;
+let recognition = null, isListening = false;
+const history = [];
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'session') initSession();
+  else stopEverything();
+}
+
+function checkStep(step) {
+  if (step === 0) document.getElementById('nextBtn').disabled = !document.getElementById('nameInput').value.trim();
+}
+
+function selectLevel(el, val) {
+  document.querySelectorAll('#step1 .choice-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedLevel = val;
+  document.getElementById('nextBtn').disabled = false;
+}
+
+function selectGoal(el, val) {
+  document.querySelectorAll('#step2 .choice-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedGoal = val;
+  document.getElementById('nextBtn').disabled = false;
+}
+
+function nextStep() {
+  if (currentStep === 0) {
+    user.name = document.getElementById('nameInput').value.trim();
+    if (!user.name) return;
+  }
+  if (currentStep === 1) { if (!selectedLevel) return; user.level = selectedLevel; }
+  if (currentStep === 2) {
+    if (!selectedGoal) return;
+    user.goal = selectedGoal;
+    document.getElementById('dashName').textContent = user.name + ' 👋';
+    document.getElementById('dashAvatar').textContent = user.name[0].toUpperCase();
+    showScreen('dashboard');
+    return;
+  }
+  document.getElementById('step' + currentStep).classList.remove('active');
+  currentStep++;
+  document.getElementById('step' + currentStep).classList.add('active');
+  document.getElementById('ps' + currentStep).classList.add('done');
+  document.getElementById('nextBtn').disabled = true;
+  if (currentStep === 2) document.getElementById('nextBtn').textContent = "Let's Go! 🚀";
+}
+
+function startSession() { showScreen('session'); }
+
+function initSession() {
+  document.getElementById('messages').innerHTML = '';
+  history.length = 0;
+  timeLeft = 900;
+  updateTimer();
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimer();
+    if (timeLeft <= 0) clearInterval(timerInterval);
+  }, 1000);
+  setTimeout(() => {
+    const opener = "Hi there! I don't think we've met before. I'm Sarah. What do you do?";
+    addAIMessage(opener, null);
+    speakText(opener);
+  }, 600);
+}
+
+function updateTimer() {
+  const m = String(Math.floor(timeLeft/60)).padStart(2,'0');
+  const s = String(timeLeft%60).padStart(2,'0');
+  const el = document.getElementById('timerDisplay');
+  el.textContent = m+':'+s;
+  el.className = 'timer' + (timeLeft < 60 ? ' urgent' : '');
+}
+
+function addAIMessage(text, tip) {
+  const msgs = document.getElementById('messages');
+  const row = document.createElement('div');
+  row.className = 'msg-row';
+  row.innerHTML = `
+    <div class="msg-ai">
+      <div class="ai-avatar">AI</div>
+      <div class="bubble-ai">${escapeHtml(text)}</div>
+    </div>
+    ${tip ? `<div class="tip-box"><div class="tip-label">💡 COACH TIP</div><div class="tip-text">${escapeHtml(tip)}</div></div>` : ''}
+  `;
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addUserMessage(text) {
+  const msgs = document.getElementById('messages');
+  const row = document.createElement('div');
+  row.className = 'msg-row';
+  row.innerHTML = `<div style="display:flex;justify-content:flex-end;"><div class="bubble-user">${escapeHtml(text)}</div></div>`;
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]);
+}
+
+function showTyping() {
+  const msgs = document.getElementById('messages');
+  const el = document.createElement('div');
+  el.id = 'typing'; el.className = 'typing';
+  el.innerHTML = `<div class="ai-avatar">AI</div><div class="typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function hideTyping() {
+  const el = document.getElementById('typing');
+  if (el) el.remove();
+}
+
+function toggleMic() {
+  if (isListening) { stopListening(); return; }
+  startListening();
+}
+
+function startListening() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    alert('Voice not supported. Please use the text input below or try Chrome browser.');
+    return;
+  }
+  window.speechSynthesis?.cancel();
+  isListening = true;
+  setMicState('active');
+  document.getElementById('micStatus').textContent = 'Listening… speak now';
+  const r = new SR();
+  r.lang = 'en-US';
+  r.interimResults = false;
+  r.continuous = false;
+  recognition = r;
+  r.onresult = e => {
+    const text = e.results[0][0].transcript;
+    stopListening();
+    if (text.trim()) sendMessage(text);
+  };
+  r.onerror = () => { stopListening(); };
+  r.onend = () => { if (isListening) stopListening(); };
+  try { r.start(); } catch(e) { stopListening(); }
+}
+
+function stopListening() {
+  isListening = false;
+  if (recognition) { try { recognition.stop(); } catch(e) {} }
+  setMicState('idle');
+  document.getElementById('micStatus').textContent = 'Tap the mic to speak';
+}
+
+function setMicState(state) {
+  const btn = document.getElementById('micBtn');
+  const wrap = document.getElementById('micWrap');
+  btn.className = 'mic-btn ' + state;
+  wrap.querySelectorAll('.ripple').forEach(r => r.remove());
+  if (state === 'active') {
+    [0,1,2].forEach(idx => {
+      const r = document.createElement('div');
+      r.className = 'ripple';
+      const s = 80 + idx*28;
+      r.style.cssText = `width:${s}px;height:${s}px;animation-delay:${idx*0.35}s`;
+      wrap.insertBefore(r, btn);
+    });
+  }
+}
+
+function sendText() {
+  const input = document.getElementById('textInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  sendMessage(text);
+}
+
+async function sendMessage(userText) {
+  addUserMessage(userText);
+  history.push({ role:'user', content: userText });
+  showTyping();
+  document.getElementById('micStatus').textContent = 'AI is thinking…';
+
+  try {
+    const resp = await fetch('/api/chat', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        system: `You are an English conversation partner in a voice roleplay.
+Scenario: You're at a professional networking event. Play "Sarah" — a friendly professional.
+After the user responds:
+1. Reply naturally as Sarah (1-2 sentences max, conversational)
+2. Add [TIP] then one short coaching tip about their grammar or vocabulary
+
+User: ${user.name}, level: ${user.level}. Keep it SHORT for voice.`,
+        messages: history
+      })
+    });
+
+    const data = await resp.json();
+    hideTyping();
+
+    if (data.error || !data.content) {
+      addAIMessage("I'm having trouble connecting. Please check the API key configuration.", null);
+      document.getElementById('micStatus').textContent = 'Tap the mic to speak';
+      return;
+    }
+
+    const full = data.content[0].text;
+    const tipMatch = full.match(/\[TIP\]([\s\S]*)/);
+    const spoken = tipMatch ? full.replace(/\[TIP\][\s\S]*/,'').trim() : full;
+    const tip = tipMatch ? tipMatch[1].trim() : null;
+    history.push({ role:'assistant', content: full });
+    addAIMessage(spoken, tip);
+    speakText(spoken);
+  } catch(e) {
+    hideTyping();
+    addAIMessage("Connection error. Please try again.", null);
+    document.getElementById('micStatus').textContent = 'Tap the mic to speak';
+  }
+}
+
+function speakText(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = 'en-US'; utt.rate = 0.95; utt.pitch = 1.05;
+  const voices = window.speechSynthesis.getVoices();
+  const v = voices.find(v => /samantha|karen|google us english|microsoft/i.test(v.name))
+    || voices.find(v => v.lang === 'en-US') || voices[0];
+  if (v) utt.voice = v;
+  utt.onstart = () => { document.getElementById('micStatus').textContent = '🔊 Sarah is speaking…'; };
+  utt.onend = () => { document.getElementById('micStatus').textContent = 'Tap the mic to speak'; };
+  window.speechSynthesis.speak(utt);
+}
+
+function stopEverything() {
+  stopListening();
+  window.speechSynthesis?.cancel();
+  clearInterval(timerInterval);
+}
+
+window.speechSynthesis?.getVoices();
+if (window.speechSynthesis) {
+  window.speechSynthesis.addEventListener('voiceschanged', () => window.speechSynthesis.getVoices());
+}
+</script>
+</body>
+</html>
