@@ -377,6 +377,7 @@ let currentStep = 0, selectedLevel = null, selectedGoal = null;
 let timerInterval = null, timeLeft = 900;
 let recognition = null, isListening = false;
 let finalTranscript = '';
+let lastInterimTranscript = '';
 const history = [];
 
 function showScreen(id) {
@@ -440,7 +441,7 @@ function initSession() {
     if (timeLeft <= 0) clearInterval(timerInterval);
   }, 1000);
   setTimeout(() => {
-    const opener = "Hi there! I don't think we've met before. I'm Sarah. What do you do?";
+    const opener = `Hey ${user.name}! Nice to meet you. I'm Sarah. So what brings you here today?`;
     addAIMessage(opener, null);
     speakText(opener);
   }, 600);
@@ -506,6 +507,7 @@ function startListening() {
   window.speechSynthesis?.cancel();
   isListening = true;
   finalTranscript = '';
+  lastInterimTranscript = '';
   setMicState('active');
   document.getElementById('micStatus').textContent = '🎙️ Listening... (release to send)';
   document.getElementById('liveTranscript').textContent = '';
@@ -527,6 +529,7 @@ function startListening() {
         interim += transcript;
       }
     }
+    lastInterimTranscript = interim;
     document.getElementById('liveTranscript').textContent = (finalTranscript + interim).trim();
   };
   
@@ -552,11 +555,13 @@ function stopListening() {
   setMicState('idle');
   document.getElementById('micStatus').textContent = 'Hold the mic to speak';
   
-  const text = finalTranscript.trim();
+  // Combine final + interim to capture all spoken words
+  const combined = (finalTranscript + ' ' + lastInterimTranscript).trim();
   document.getElementById('liveTranscript').textContent = '';
   finalTranscript = '';
+  lastInterimTranscript = '';
   
-  if (text) sendMessage(text);
+  if (combined) sendMessage(combined);
 }
 
 function setMicState(state) {
@@ -619,20 +624,36 @@ async function sendMessage(userText) {
   addUserMessage(userText);
   history.push({ role:'user', content: userText });
   showTyping();
-  document.getElementById('micStatus').textContent = 'AI is thinking…';
+  document.getElementById('micStatus').textContent = 'Sarah is thinking…';
 
   try {
     const resp = await fetch('/api/chat', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        system: `You are an English conversation partner in a voice roleplay.
-Scenario: You're at a professional networking event. Play "Sarah" — a friendly professional.
-After the user responds:
-1. Reply naturally as Sarah (1-2 sentences max, conversational)
-2. Add [TIP] then one short coaching tip about their grammar or vocabulary
+        system: `You are Sarah, a warm and friendly American woman in her late 20s. You're chatting casually with ${user.name}, who is practicing English (level: ${user.level}, goal: ${user.goal}).
 
-User: ${user.name}, level: ${user.level}. Keep it SHORT for voice.`,
+PERSONALITY:
+- Talk like a friend, not a teacher. Be warm, curious, and genuine.
+- You already know ${user.name}'s name — never ask for it again. Use their name naturally sometimes.
+- Share little things about "yourself" (your day, opinions, small stories) to make it feel real.
+- Ask follow-up questions that go deeper, not generic ones.
+- Use casual contractions: "I'm", "you're", "don't", "gonna", "wanna" — sound human.
+- Match their energy. If they say short replies, encourage them gently.
+
+LEVEL ADAPTATION:
+- Beginner: Use simple vocabulary, short sentences, speak slower.
+- Intermediate: Natural pace, common idioms okay.
+- Advanced: Full natural speed, complex topics, push them.
+
+CRITICAL RULES:
+1. Reply in 1-2 SHORT sentences max (this is voice — keep it brief).
+2. Always end with a question or hook to keep them talking.
+3. After your reply, add [TIP] then ONE specific, encouraging coaching tip about their last message (grammar, vocabulary, or fluency). Be specific to what they said. Keep it under 20 words.
+4. NEVER lecture or correct multiple things — just one tip.
+5. Stay in character as Sarah — never break the 4th wall.
+
+Scenario: Casual networking event. You just met ${user.name}.`,
         messages: history
       })
     });
@@ -660,15 +681,55 @@ User: ${user.name}, level: ${user.level}. Keep it SHORT for voice.`,
   }
 }
 
+function pickFemaleVoice() {
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices.length) return null;
+  
+  // Priority list of known female voice names across platforms
+  const femaleNames = [
+    'Samantha',      // macOS / iOS
+    'Karen',         // macOS Australian
+    'Tessa',         // macOS South African
+    'Victoria',      // macOS
+    'Allison',       // macOS
+    'Ava',           // macOS
+    'Susan',         // macOS
+    'Microsoft Zira', // Windows
+    'Microsoft Aria', // Windows newer
+    'Google US English', // Chrome (often female)
+    'Google UK English Female', // Chrome
+  ];
+  
+  // Try each name in priority order (case insensitive partial match)
+  for (const name of femaleNames) {
+    const v = voices.find(v => v.name.toLowerCase().includes(name.toLowerCase()));
+    if (v) return v;
+  }
+  
+  // Fallback: any voice with "female" in name
+  let v = voices.find(v => /female/i.test(v.name) && /en/i.test(v.lang));
+  if (v) return v;
+  
+  // Fallback: any English voice that's NOT explicitly male
+  v = voices.find(v => /en[-_]?(US|GB)/i.test(v.lang) && !/male|david|mark|george|daniel/i.test(v.name));
+  if (v) return v;
+  
+  // Last resort: any English voice
+  v = voices.find(v => v.lang.startsWith('en'));
+  return v || voices[0];
+}
+
 function speakText(text) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const utt = new SpeechSynthesisUtterance(text);
-  utt.lang = 'en-US'; utt.rate = 0.95; utt.pitch = 1.05;
-  const voices = window.speechSynthesis.getVoices();
-  const v = voices.find(v => /samantha|karen|google us english|microsoft/i.test(v.name))
-    || voices.find(v => v.lang === 'en-US') || voices[0];
-  if (v) utt.voice = v;
+  utt.lang = 'en-US';
+  utt.rate = 0.95;
+  utt.pitch = 1.15; // slightly higher pitch = more feminine
+  
+  const voice = pickFemaleVoice();
+  if (voice) utt.voice = voice;
+  
   utt.onstart = () => { document.getElementById('micStatus').textContent = '🔊 Sarah is speaking…'; };
   utt.onend = () => { document.getElementById('micStatus').textContent = 'Hold the mic to speak'; };
   window.speechSynthesis.speak(utt);
@@ -680,6 +741,7 @@ function stopEverything() {
   clearInterval(timerInterval);
 }
 
+// Load voices (some browsers need this triggered)
 window.speechSynthesis?.getVoices();
 if (window.speechSynthesis) {
   window.speechSynthesis.addEventListener('voiceschanged', () => window.speechSynthesis.getVoices());
