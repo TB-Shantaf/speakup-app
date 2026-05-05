@@ -153,15 +153,20 @@
   .dot:nth-child(3){animation:bounce 1.2s ease 0.4s infinite;}
   .mic-area{padding:20px 16px 36px;border-top:1px solid rgba(255,255,255,0.08);
     text-align:center;flex-shrink:0;}
-  .mic-status{color:#8892a4;font-size:13px;margin-bottom:20px;}
+  .mic-status{color:#8892a4;font-size:13px;margin-bottom:12px;}
+  .live-transcript{min-height:24px;color:#00E5A0;font-size:14px;font-weight:500;
+    margin-bottom:14px;padding:0 16px;font-style:italic;
+    word-wrap:break-word;max-width:100%;}
   .mic-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center;}
   .ripple{position:absolute;border-radius:50%;border:2px solid rgba(0,229,160,0.3);
     animation:ripple 1.8s ease-out infinite;pointer-events:none;}
   .mic-btn{width:80px;height:80px;border-radius:50%;border:none;cursor:pointer;
-    font-size:32px;transition:all 0.3s;position:relative;z-index:1;}
+    font-size:32px;transition:all 0.2s;position:relative;z-index:1;
+    user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+    touch-action:none;}
   .mic-btn.idle{background:rgba(255,255,255,0.08);}
   .mic-btn.active{background:linear-gradient(135deg,#00E5A0,#00B8D9);
-    box-shadow:0 0 30px rgba(0,229,160,0.5);}
+    box-shadow:0 0 30px rgba(0,229,160,0.5);transform:scale(1.1);}
   .finish-btn{margin-top:16px;padding:10px 24px;background:none;
     border:1px solid rgba(255,255,255,0.1);border-radius:10px;
     color:#8892a4;font-size:13px;cursor:pointer;}
@@ -324,9 +329,10 @@
     </div>
     <div class="messages" id="messages"></div>
     <div class="mic-area">
-      <div class="mic-status" id="micStatus">Tap the mic to speak</div>
+      <div class="mic-status" id="micStatus">Hold the mic to speak</div>
+      <div class="live-transcript" id="liveTranscript"></div>
       <div class="mic-wrap" id="micWrap">
-        <button class="mic-btn idle" id="micBtn" onclick="toggleMic()">🎙️</button>
+        <button class="mic-btn idle" id="micBtn">🎙️</button>
       </div>
       <div class="text-fallback">
         <input type="text" id="textInput" placeholder="Or type your response..." onkeydown="if(event.key==='Enter')sendText()"/>
@@ -370,6 +376,7 @@ const user = { name:"Friend", level:"Intermediate", goal:"General" };
 let currentStep = 0, selectedLevel = null, selectedGoal = null;
 let timerInterval = null, timeLeft = 900;
 let recognition = null, isListening = false;
+let finalTranscript = '';
 const history = [];
 
 function showScreen(id) {
@@ -489,46 +496,73 @@ function hideTyping() {
   if (el) el.remove();
 }
 
-function toggleMic() {
-  if (isListening) { stopListening(); return; }
-  startListening();
-}
-
 function startListening() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) {
     alert('Voice not supported. Please use the text input below or try Chrome browser.');
     return;
   }
+  if (isListening) return;
   window.speechSynthesis?.cancel();
   isListening = true;
+  finalTranscript = '';
   setMicState('active');
-  document.getElementById('micStatus').textContent = 'Listening… speak now';
+  document.getElementById('micStatus').textContent = '🎙️ Listening... (release to send)';
+  document.getElementById('liveTranscript').textContent = '';
+  
   const r = new SR();
   r.lang = 'en-US';
-  r.interimResults = false;
-  r.continuous = false;
+  r.interimResults = true;
+  r.continuous = true;
+  r.maxAlternatives = 1;
   recognition = r;
+  
   r.onresult = e => {
-    const text = e.results[0][0].transcript;
-    stopListening();
-    if (text.trim()) sendMessage(text);
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const transcript = e.results[i][0].transcript;
+      if (e.results[i].isFinal) {
+        finalTranscript += transcript + ' ';
+      } else {
+        interim += transcript;
+      }
+    }
+    document.getElementById('liveTranscript').textContent = (finalTranscript + interim).trim();
   };
-  r.onerror = () => { stopListening(); };
-  r.onend = () => { if (isListening) stopListening(); };
+  
+  r.onerror = (event) => {
+    if (event.error !== 'no-speech' && event.error !== 'aborted') {
+      console.log('Speech error:', event.error);
+    }
+  };
+  
+  r.onend = () => {
+    if (isListening) {
+      try { r.start(); } catch(e) {}
+    }
+  };
+  
   try { r.start(); } catch(e) { stopListening(); }
 }
 
 function stopListening() {
+  if (!isListening) return;
   isListening = false;
   if (recognition) { try { recognition.stop(); } catch(e) {} }
   setMicState('idle');
-  document.getElementById('micStatus').textContent = 'Tap the mic to speak';
+  document.getElementById('micStatus').textContent = 'Hold the mic to speak';
+  
+  const text = finalTranscript.trim();
+  document.getElementById('liveTranscript').textContent = '';
+  finalTranscript = '';
+  
+  if (text) sendMessage(text);
 }
 
 function setMicState(state) {
   const btn = document.getElementById('micBtn');
   const wrap = document.getElementById('micWrap');
+  if (!btn || !wrap) return;
   btn.className = 'mic-btn ' + state;
   wrap.querySelectorAll('.ripple').forEach(r => r.remove());
   if (state === 'active') {
@@ -540,6 +574,37 @@ function setMicState(state) {
       wrap.insertBefore(r, btn);
     });
   }
+}
+
+function setupMicEvents() {
+  const micBtn = document.getElementById('micBtn');
+  if (!micBtn) return;
+  
+  micBtn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    startListening();
+  });
+  micBtn.addEventListener('mouseup', (e) => {
+    e.preventDefault();
+    stopListening();
+  });
+  micBtn.addEventListener('mouseleave', () => {
+    if (isListening) stopListening();
+  });
+  
+  micBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    startListening();
+  }, { passive: false });
+  micBtn.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    stopListening();
+  }, { passive: false });
+  micBtn.addEventListener('touchcancel', () => {
+    if (isListening) stopListening();
+  });
+  
+  micBtn.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 
 function sendText() {
@@ -577,7 +642,7 @@ User: ${user.name}, level: ${user.level}. Keep it SHORT for voice.`,
 
     if (data.error || !data.content) {
       addAIMessage("I'm having trouble connecting. Please check the API key configuration.", null);
-      document.getElementById('micStatus').textContent = 'Tap the mic to speak';
+      document.getElementById('micStatus').textContent = 'Hold the mic to speak';
       return;
     }
 
@@ -591,7 +656,7 @@ User: ${user.name}, level: ${user.level}. Keep it SHORT for voice.`,
   } catch(e) {
     hideTyping();
     addAIMessage("Connection error. Please try again.", null);
-    document.getElementById('micStatus').textContent = 'Tap the mic to speak';
+    document.getElementById('micStatus').textContent = 'Hold the mic to speak';
   }
 }
 
@@ -605,7 +670,7 @@ function speakText(text) {
     || voices.find(v => v.lang === 'en-US') || voices[0];
   if (v) utt.voice = v;
   utt.onstart = () => { document.getElementById('micStatus').textContent = '🔊 Sarah is speaking…'; };
-  utt.onend = () => { document.getElementById('micStatus').textContent = 'Tap the mic to speak'; };
+  utt.onend = () => { document.getElementById('micStatus').textContent = 'Hold the mic to speak'; };
   window.speechSynthesis.speak(utt);
 }
 
@@ -618,6 +683,12 @@ function stopEverything() {
 window.speechSynthesis?.getVoices();
 if (window.speechSynthesis) {
   window.speechSynthesis.addEventListener('voiceschanged', () => window.speechSynthesis.getVoices());
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setupMicEvents);
+} else {
+  setupMicEvents();
 }
 </script>
 </body>
